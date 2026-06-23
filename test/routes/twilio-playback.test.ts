@@ -48,56 +48,49 @@ describe('playback/dial routes', () => {
     expect(xml).toContain('<Play>https://x/a.mp3</Play>');
   });
 
-  it('/dial: 各listenerにmakeCallし空Responseを返す', async () => {
+  it('/dial: 各listenerをQueueにenqueueし空Responseを返す', async () => {
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8181', contact_type: 'listener', name: 'L1' });
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8182', contact_type: 'listener', name: 'L2' });
-    const calls: { to: string; from: string; url: string }[] = [];
-    setTwilioClientFactory(() => ({
-      makeCall: async (to: string, from: string, url: string) => { calls.push({ to, from, url }); },
-    }) as any);
+    const sent: any[] = [];
+    const mockQueue = { sendBatch: async (msgs: any[]) => { sent.push(...msgs); }, send: async () => {} };
     const url = `/dial?TenantID=hosoiri&Caller=${encodeURIComponent('+8190')}&RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`;
-    const res = await app.request(url, {}, env);
-    expect(calls.map((c) => c.to).sort()).toEqual(['+8181', '+8182']);
-    // 各発信の from はテナントの twilioCallerId（seed した値）と一致する
-    expect(calls.every((c) => c.from === TO)).toBe(true);
-    // 各発信の url はテナントの domain の /play で、Recorder/RecordingUrl/TenantID を含む
-    expect(calls.every((c) =>
-      c.url.includes('https://h.example/play?Recorder=')
-      && c.url.includes(`RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`)
-      && c.url.includes('TenantID=hosoiri'),
+    const res = await app.request(url, {}, { ...env, DIAL_QUEUE: mockQueue } as any);
+    // tenantId
+    expect(sent.every((m) => m.body.tenantId === 'hosoiri')).toBe(true);
+    // to はリスナーの電話番号
+    expect(sent.map((m) => m.body.to).sort()).toEqual(['+8181', '+8182']);
+    // playUrl にテナントの domain と Recorder/RecordingUrl/TenantID が含まれる
+    expect(sent.every((m) =>
+      m.body.playUrl.includes('https://h.example/play?Recorder=')
+      && m.body.playUrl.includes(`RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`)
+      && m.body.playUrl.includes('TenantID=hosoiri'),
     )).toBe(true);
     expect(await res.text()).toBe('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   });
 
   // --- 署名検証テスト（TWILIO_VALIDATE='true' 時）---
 
-  it('/dial: TWILIO_VALIDATE=true かつ署名なしで 403、makeCall 未呼び出し', async () => {
-    const calls: string[] = [];
-    setTwilioClientFactory(() => ({
-      makeCall: async (to: string) => { calls.push(to); },
-    }) as any);
+  it('/dial: TWILIO_VALIDATE=true かつ署名なしで 403、enqueue されない', async () => {
+    const sent: any[] = [];
+    const mockQueue = { sendBatch: async (msgs: any[]) => { sent.push(...msgs); }, send: async () => {} };
     const url = `/dial?TenantID=hosoiri&Caller=${encodeURIComponent('+8190')}&RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`;
-    const res = await app.request(url, {}, { ...env, TWILIO_VALIDATE: 'true' } as any);
+    const res = await app.request(url, {}, { ...env, TWILIO_VALIDATE: 'true', DIAL_QUEUE: mockQueue } as any);
     expect(res.status).toBe(403);
-    expect(calls).toHaveLength(0);
+    expect(sent).toHaveLength(0);
   });
 
-  it('/dial: TWILIO_VALIDATE=true かつ正当な署名で 200、makeCall 呼び出し', async () => {
+  it('/dial: TWILIO_VALIDATE=true かつ正当な署名で 200、enqueue される', async () => {
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8181', contact_type: 'listener', name: 'L1' });
-    const calls: string[] = [];
-    setTwilioClientFactory(() => ({
-      makeCall: async (to: string) => { calls.push(to); },
-    }) as any);
-    // Hono の app.request に相対パスを渡すと内部では http://localhost/ をベースにする
+    const sent: any[] = [];
+    const mockQueue = { sendBatch: async (msgs: any[]) => { sent.push(...msgs); }, send: async () => {} };
     const path = `/dial?TenantID=hosoiri&Caller=${encodeURIComponent('+8190')}&RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`;
     const fullUrl = `http://localhost${path}`;
-    // GET リクエストなのでパラメータは空オブジェクト（URL にクエリが含まれる）
     const sig = await computeSignature('token-hosoiri', fullUrl, {});
     const res = await app.request(path, {
       headers: { 'X-Twilio-Signature': sig },
-    }, { ...env, TWILIO_VALIDATE: 'true' } as any);
+    }, { ...env, TWILIO_VALIDATE: 'true', DIAL_QUEUE: mockQueue } as any);
     expect(res.status).toBe(200);
-    expect(calls).toContain('+8181');
+    expect(sent.some((m) => m.body.to === '+8181')).toBe(true);
   });
 
   it('/play: TWILIO_VALIDATE=true かつ署名なしで 403', async () => {

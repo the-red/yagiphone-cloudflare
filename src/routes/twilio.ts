@@ -160,19 +160,25 @@ async function handleDial(c: Ctx) {
 
   const tenant = await getTenant(c.env.DB, tenantId);
   if (!tenant) return errorTwiml(c);
-  // Fix 1: テナントが確定した後、makeCall前に署名検証
+  // テナントが確定した後、enqueue 前に署名検証
   if (!(await assertTwilioSignature(c, params, tenant.twilioAuthToken))) return c.text('forbidden', 403);
 
   const listeners = await listListeners(c.env.DB, tenantId);
-  const client = getTwilioClient(tenant);
 
-  const playUrl = `https://${tenant.domain}/play?Recorder=${encodeURIComponent(caller)}&RecordingUrl=${encodeURIComponent(recUrl)}&TenantID=${encodeURIComponent(tenantId)}`;
+  if (listeners.length > 0) {
+    const playUrl = `https://${tenant.domain}/play?Recorder=${encodeURIComponent(caller)}&RecordingUrl=${encodeURIComponent(recUrl)}&TenantID=${encodeURIComponent(tenantId)}`;
 
-  await Promise.all(listeners.map((l) =>
-    client.makeCall(l.phoneNumber, tenant.twilioCallerId, playUrl).catch((e) => {
-      console.log(`WARN: ${l.phoneNumber} への発信失敗: ${e}`);
-    }),
-  ));
+    // キューメッセージを構築（Twilio 認証情報は含めない）
+    const messages = listeners.map((l) => ({
+      body: { tenantId, to: l.phoneNumber, playUrl },
+    }));
+
+    // Cloudflare Queue の上限は 100件/sendBatch のため、チャンクして送信
+    for (let i = 0; i < messages.length; i += 100) {
+      await c.env.DIAL_QUEUE.sendBatch(messages.slice(i, i + 100));
+    }
+  }
+
   return twimlResponse(c, new TwiML());
 }
 
