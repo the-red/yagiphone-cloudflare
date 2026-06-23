@@ -117,3 +117,6 @@ top-level = dev（`yagiphone-dev`、ゲート無効）、`env.production` = prod
 - gitleaks が `dev@local`（テスト用ダミー）等を誤検出することがある。誤検出なら `--no-verify` で再コミット。
 - `.superpowers/` は SDD（subagent-driven-development）のスクラッチで gitignore 対象。
 - Access JWKS キャッシュに TTL は無い（鍵ローテーションは Worker 再デプロイ/アイソレート再起動で反映）。
+- `/admin/*` は認証のみで**テナント単位の認可は無い**（Access ポリシーで単一運用者グループに限定する前提。複数テナントを自己管理させるなら要追加実装）。
+- `web/src/components/UsageTable.tsx` の会計年度末が `02-28` 固定で、うるう年は集計期間が1日ズレる（AWS版から引き継いだ軽微バグ。`new Date(endYear, 2, 0)` 等で月末算出に直すのが正）。
+- 一部テストは網羅が薄い箇所がある（`findContact` の recorder 優先、TwiML の `"` / `'` エスケープ等。実装は正しく、補強候補）。
