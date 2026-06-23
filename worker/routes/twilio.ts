@@ -39,7 +39,7 @@ async function handleMain(c: Ctx) {
   const recorder = await findRecorder(c.env.DB, tenant.tenantId, from);
   const isRecorder = recorder !== null;
 
-  const twiml = new TwiML().gather('/router', 1, (g) => {
+  const twiml = new TwiML().gather('/twilio/router', 1, (g) => {
     if (isRecorder) {
       g.say(`${tenant.name}の電話連絡網です。録音する場合は3を、最新の録音を聞く場合は1を押してください。`);
     } else {
@@ -61,13 +61,13 @@ async function handleRouter(c: Ctx) {
   const twiml = new TwiML();
 
   if (digits === '1') {
-    twiml.redirect('/replay');
+    twiml.redirect('/twilio/replay');
   } else if (digits === '3') {
     const recorder = await findRecorder(c.env.DB, tenant.tenantId, from);
-    if (recorder) twiml.redirect('/record');
-    else { twiml.say('その操作は許可されていません。'); twiml.redirect('/main'); }
+    if (recorder) twiml.redirect('/twilio/record');
+    else { twiml.say('その操作は許可されていません。'); twiml.redirect('/twilio/main'); }
   } else {
-    twiml.say('入力が正しくありません。'); twiml.redirect('/main');
+    twiml.say('入力が正しくありません。'); twiml.redirect('/twilio/main');
   }
   return twimlResponse(c, twiml);
 }
@@ -81,15 +81,15 @@ async function handleRecord(c: Ctx) {
   const from = params.From ?? '';
   const listeners = await listListeners(c.env.DB, tenant.tenantId);
   const maxLength = tenant.maxRecordingLength === 0 ? 50 : tenant.maxRecordingLength;
-  const callbackUrl = `/dial?Caller=${encodeURIComponent(from)}&TenantID=${encodeURIComponent(tenant.tenantId)}`;
+  const callbackUrl = `/twilio/dial?Caller=${encodeURIComponent(from)}&TenantID=${encodeURIComponent(tenant.tenantId)}`;
 
   const twiml = new TwiML()
     .say(`録音を開始します。このメッセージは${listeners.length}人に送信されます。発信音の後にメッセージを録音してください。終了したら電話を切ってください。`)
-    .record('/hangup', callbackUrl, maxLength);
+    .record('/twilio/hangup', callbackUrl, maxLength);
   return twimlResponse(c, twiml);
 }
 
-// /hangup は <Record action="/hangup"> のアクションコールバック。
+// /hangup は <Record action="/twilio/hangup"> のアクションコールバック。
 // 静的な <Hangup> のみを返し、テナントデータも副作用も持たないため、
 // 署名検証・テナント解決のコンテキストを必要としない（意図的にバイパス）。
 function handleHangup(c: Ctx) {
@@ -166,7 +166,7 @@ async function handleDial(c: Ctx) {
   const listeners = await listListeners(c.env.DB, tenantId);
 
   if (listeners.length > 0) {
-    const playUrl = `https://${tenant.domain}/play?Recorder=${encodeURIComponent(caller)}&RecordingUrl=${encodeURIComponent(recUrl)}&TenantID=${encodeURIComponent(tenantId)}`;
+    const playUrl = `https://${tenant.domain}/twilio/play?Recorder=${encodeURIComponent(caller)}&RecordingUrl=${encodeURIComponent(recUrl)}&TenantID=${encodeURIComponent(tenantId)}`;
 
     // キューメッセージを構築（Twilio 認証情報は含めない）
     const messages = listeners.map((l) => ({

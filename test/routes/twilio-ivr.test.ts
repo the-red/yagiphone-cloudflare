@@ -21,47 +21,47 @@ describe('Twilio IVR routes', () => {
   });
 
   it('/main: 名簿外はReject', async () => {
-    const res = await post('/main', { To: TO, From: '+819999' });
+    const res = await post('/twilio/main', { To: TO, From: '+819999' });
     expect(await res.text()).toContain('<Reject></Reject>');
   });
 
   it('/main: recorderには録音案内を含むGather', async () => {
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8190', contact_type: 'recorder', name: '太郎' });
-    const res = await post('/main', { To: TO, From: '+8190' });
+    const res = await post('/twilio/main', { To: TO, From: '+8190' });
     const xml = await res.text();
-    expect(xml).toContain('<Gather action="/router" numDigits="1">');
+    expect(xml).toContain('<Gather action="/twilio/router" numDigits="1">');
     expect(xml).toContain('録音する場合は3');
   });
 
   it('/main: listenerには再生案内のみ', async () => {
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8191', contact_type: 'listener', name: '花子' });
-    const res = await post('/main', { To: TO, From: '+8191' });
+    const res = await post('/twilio/main', { To: TO, From: '+8191' });
     const xml = await res.text();
     expect(xml).toContain('最新の録音を聞く場合は1');
     expect(xml).not.toContain('録音する場合は3');
   });
 
   it('/router: 1 は /replay へリダイレクト', async () => {
-    const res = await post('/router', { To: TO, From: '+8191', Digits: '1' });
-    expect(await res.text()).toContain('<Redirect>/replay</Redirect>');
+    const res = await post('/twilio/router', { To: TO, From: '+8191', Digits: '1' });
+    expect(await res.text()).toContain('<Redirect>/twilio/replay</Redirect>');
   });
 
   it('/router: 3 は recorder なら /record', async () => {
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8190', contact_type: 'recorder', name: '太郎' });
-    const res = await post('/router', { To: TO, From: '+8190', Digits: '3' });
-    expect(await res.text()).toContain('<Redirect>/record</Redirect>');
+    const res = await post('/twilio/router', { To: TO, From: '+8190', Digits: '3' });
+    expect(await res.text()).toContain('<Redirect>/twilio/record</Redirect>');
   });
 
   it('/router: 3 は非recorderなら不許可メッセージ', async () => {
-    const res = await post('/router', { To: TO, From: '+8191', Digits: '3' });
+    const res = await post('/twilio/router', { To: TO, From: '+8191', Digits: '3' });
     const xml = await res.text();
     expect(xml).toContain('その操作は許可されていません');
-    expect(xml).toContain('<Redirect>/main</Redirect>');
+    expect(xml).toContain('<Redirect>/twilio/main</Redirect>');
   });
 
   it('/record: 録音案内とRecordを返す', async () => {
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8192', contact_type: 'listener', name: 'L' });
-    const res = await post('/record', { To: TO, From: '+8190' });
+    const res = await post('/twilio/record', { To: TO, From: '+8190' });
     const xml = await res.text();
     expect(xml).toContain('1人に送信されます');
     expect(xml).toContain('recordingStatusCallbackMethod="GET"');
@@ -72,7 +72,7 @@ describe('Twilio IVR routes', () => {
     const TO2 = '+815000000002';
     await seedTenant({ tenant_id: 'kamioka', twilio_caller_id: TO2, name: '神岡', max_recording_length: 120 });
     await seedContact({ tenant_id: 'kamioka', phone_number: '+8193', contact_type: 'listener', name: 'L2' });
-    const res = await post('/record', { To: TO2, From: '+8190' });
+    const res = await post('/twilio/record', { To: TO2, From: '+8190' });
     const xml = await res.text();
     expect(xml).toContain('1人に送信されます');
     expect(xml).toContain('maxLength="120"');
@@ -80,7 +80,7 @@ describe('Twilio IVR routes', () => {
   });
 
   it('/hangup: Hangup', async () => {
-    const res = await post('/hangup', {});
+    const res = await post('/twilio/hangup', {});
     expect(await res.text()).toContain('<Hangup></Hangup>');
   });
 });

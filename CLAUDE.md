@@ -17,7 +17,7 @@ AWS 版（S3 / CloudFront / Lambda(Go) / DynamoDB / Cognito / API Gateway）を
 - **Hono** — Worker のルーター
 - **Cloudflare Workers**（V8 isolate）— ランタイム
 - **D1**（SQLite）— データストア（binding 名 `DB`）
-- **Cloudflare Queues**（binding 名 `DIAL_QUEUE`）— `/dial` の一斉架電Fan-outに使用
+- **Cloudflare Queues**（binding 名 `DIAL_QUEUE`）— `/twilio/dial` の一斉架電Fan-outに使用
 - **Cloudflare Access** — `/admin/*` の認証（JWT を Worker 側で検証）
 - **Static Assets**（binding 名 `ASSETS`）— `web/out/`（Next.js 静的 export）を SPA 配信
 - **Vitest + @cloudflare/vitest-pool-workers** — テスト（実 D1 を Miniflare で実行）
@@ -77,7 +77,10 @@ test/                 Vitest（test/helpers/db.ts に applyMigrations/seedTenant
   - `ACCESS_ENABLED=true` で `/admin/*` の Access JWT 検証が有効（`false` ならダミーユーザー `dev@local` で通過）。
   - `TWILIO_VALIDATE=true` で Twilio Webhook の署名検証が有効。
   - 本番有効化は `wrangler.jsonc` の `env.production`（両ゲート `"true"`）で行い `wrangler deploy --env production`。
-- **`/dial` は makeCall を直接呼ばない**。リスナーごとに `DIAL_QUEUE.sendBatch` でキューに積む
+- **Twilio Webhook は `/twilio/*` に集約**（`worker/index.ts` で `app.route('/twilio', twilioRoutes)`）。
+  Cloudflare Access は `/twilio/*` を Bypass、それ以外（Web UI・`/admin/*`）を保護する想定。
+  TwiML 内のリダイレクト/コールバックURL（`/twilio/router` 等）も絶対パスで `/twilio` を付ける。
+- **`/twilio/dial` は makeCall を直接呼ばない**。リスナーごとに `DIAL_QUEUE.sendBatch` でキューに積む
   （100件/sendBatch 制限でチャンク）。コンシューマー `handleDialQueue` が最大20件/バッチで処理。
 - **default export は `Object.assign(app, { queue: handleDialQueue })` パターン**。
   `app.fetch` / `app.request` をそのまま保ちながら Workers ランタイムの `.queue` ハンドラを追加する。

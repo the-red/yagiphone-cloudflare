@@ -12,9 +12,9 @@ AWS 版（S3 / CloudFront / Lambda(Go) / DynamoDB / Cognito）を
 Cloudflare DNS → 単一Worker（Honoルーター）
   ├─ /*  静的アセット（Static Assets binding）… Next.js export（web/out/）を配信
   ├─ /health                … ヘルスチェック（GET）
-  ├─ /main /router /record /hangup /replay /play /dial
-  │     … Twilio署名検証ミドルウェア → TwiML応答（無認可）
-  │     /dial はリスナーを Cloudflare Queue (yagiphone-dial) にエンキューし、
+  ├─ /twilio/*  （main router record hangup replay play dial）
+  │     … Twilio Webhook。署名検証ミドルウェア → TwiML応答（Accessは /twilio/* をBypass）
+  │     /twilio/dial はリスナーを Cloudflare Queue (yagiphone-dial) にエンキューし、
   │     同一Workerの queue() ハンドラが20件/バッチで makeCall する（Free 50サブリクエスト制限回避）
   └─ /admin/:tenantId/{contacts,recordings,usage}
         … Cloudflare Access JWT検証ミドルウェア → 管理API
@@ -169,7 +169,7 @@ wrangler d1 execute yagiphone --remote --env production --file=seed.sql     # pr
 1. `wrangler.jsonc` に `routes`（カスタムドメイン）を追加して再デプロイ
 2. Cloudflare Zero Trust で Access アプリケーションを作成
    - Web UI 全体（`/`）と管理 API（`/admin/*`）を保護
-   - Twilio Webhook パス（`/main` `/router` `/record` `/play` `/replay` `/dial` `/hangup` `/health`）は **Bypass** ポリシーに設定
+   - Twilio Webhook は `/twilio/*` に集約済み。**`/twilio/*` を Bypass** ポリシーに設定（必要なら `/health` も）。残り（Web UI・`/admin/*`）は Allow で保護
 3. Access Application の **Audience（AUD）タグ** と **チームドメイン** を取得
 4. `wrangler.jsonc` `vars` を更新:
    ```jsonc
@@ -190,14 +190,14 @@ yagiphone-cloudflare/
   worker/             … Worker 本体（wrangler.jsonc の main = worker/index.ts）
     index.ts          … エントリポイント（Hono アプリ + queue コンシューマー）
     env.ts            … 環境変数・バインディング型定義
-    routes/twilio.ts  … Twilio Webhook ハンドラ（/main /router /record /hangup /replay /play /dial）
+    routes/twilio.ts  … Twilio Webhook ハンドラ（/twilio/* に集約: main router record hangup replay play dial）
     routes/admin.ts   … 管理 API ハンドラ（/admin/:tenantId/...）
     routes/helpers.ts … リクエスト共通ヘルパ
     auth/access.ts    … Cloudflare Access JWT 検証ミドルウェア
     db/               … D1 アクセス層（types / tenants / contacts）
     twiml/index.ts    … TwiML 生成ユーティリティ
     twilio/           … Twilio REST クライアント（client）+ 署名検証（signature）
-    queue/dial.ts     … /dial 一斉架電のキューコンシューマー
+    queue/dial.ts     … /twilio/dial 一斉架電のキューコンシューマー
   web/                … Next.js 静的フロントエンド（npm run build → out/）
   migrations/
     0001_init.sql     … D1 スキーマ（tenants / contacts テーブル）

@@ -8,7 +8,7 @@ import { handleDialQueue } from './queue/dial';
 const app = new Hono<{ Bindings: Env }>();
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
-app.route('/', twilioRoutes);
+app.route('/twilio', twilioRoutes);
 
 // 管理APIにAccessミドルウェアを適用
 app.use('/admin/*', accessMiddleware);
