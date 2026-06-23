@@ -14,6 +14,8 @@ Cloudflare DNS → 単一Worker（Honoルーター）
   ├─ /health                … ヘルスチェック（GET）
   ├─ /main /router /record /hangup /replay /play /dial
   │     … Twilio署名検証ミドルウェア → TwiML応答（無認可）
+  │     /dial はリスナーを Cloudflare Queue (yagiphone-dial) にエンキューし、
+  │     同一Workerの queue() ハンドラが20件/バッチで makeCall する（Free 50サブリクエスト制限回避）
   └─ /admin/:tenantId/{contacts,recordings,usage}
         … Cloudflare Access JWT検証ミドルウェア → 管理API
              ├─ D1（tenants / contacts テーブル）
@@ -91,6 +93,7 @@ npx wrangler dev
 
 ```bash
 npx wrangler d1 create yagiphone
+npx wrangler queues create yagiphone-dial   # Queue 作成（初回のみ）
 ```
 
 出力された `database_id` を `wrangler.jsonc` の以下の箇所に記入する:

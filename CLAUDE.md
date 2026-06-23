@@ -17,6 +17,7 @@ AWS 版（S3 / CloudFront / Lambda(Go) / DynamoDB / Cognito / API Gateway）を
 - **Hono** — Worker のルーター
 - **Cloudflare Workers**（V8 isolate）— ランタイム
 - **D1**（SQLite）— データストア（binding 名 `DB`）
+- **Cloudflare Queues**（binding 名 `DIAL_QUEUE`）— `/dial` の一斉架電Fan-outに使用
 - **Cloudflare Access** — `/admin/*` の認証（JWT を Worker 側で検証）
 - **Static Assets**（binding 名 `ASSETS`）— `web/out/`（Next.js 静的 export）を SPA 配信
 - **Vitest + @cloudflare/vitest-pool-workers** — テスト（実 D1 を Miniflare で実行）
@@ -42,7 +43,7 @@ src/
   index.ts            Hono アプリ。マウント順が重要:
                       /health → twilioRoutes → use('/admin/*', accessMiddleware)
                       → adminRoutes → app.all('*') で ASSETS フォールバック（必ず最後）
-  env.ts              Env 型（DB, ASSETS, ACCESS_*, TWILIO_VALIDATE）
+  env.ts              Env 型（DB, ASSETS, ACCESS_*, TWILIO_VALIDATE, DIAL_QUEUE）
   db/types.ts         Tenant / Contact 型と snake_case 行 → camelCase 変換（toTenant/toContact）
   db/tenants.ts       テナントクエリ（getTenant, getTenantByCallerId）
   db/contacts.ts      名簿クエリ（findContact/findRecorder/list*/createContact[upsert]/deleteContact）
@@ -53,6 +54,8 @@ src/
   routes/twilio.ts    Twilio Webhook ハンドラ。Twilio クライアントは setTwilioClientFactory で差し替え可
   routes/admin.ts     管理 API（contacts CRUD / recordings / usage）
   auth/access.ts      Cloudflare Access JWT 検証ミドルウェア（RS256 / JWKS）
+  queue/dial.ts       DialMessage 型 + handleDialQueue コンシューマー。
+                      バッチ内でテナントをキャッシュして D1 読み取りを最小化。
 migrations/0001_init.sql   D1 スキーマ（tenants / contacts）
 web/                  Next.js 静的フロントエンド（→ web/out/）
 test/                 Vitest（test/helpers/db.ts に applyMigrations/seedTenant/seedContact）
@@ -70,6 +73,10 @@ test/                 Vitest（test/helpers/db.ts に applyMigrations/seedTenant
   - `ACCESS_ENABLED=true` で `/admin/*` の Access JWT 検証が有効（`false` ならダミーユーザー `dev@local` で通過）。
   - `TWILIO_VALIDATE=true` で Twilio Webhook の署名検証が有効。
   - 本番有効化は `wrangler.jsonc` の `env.production`（両ゲート `"true"`）で行い `wrangler deploy --env production`。
+- **`/dial` は makeCall を直接呼ばない**。リスナーごとに `DIAL_QUEUE.sendBatch` でキューに積む
+  （100件/sendBatch 制限でチャンク）。コンシューマー `handleDialQueue` が最大20件/バッチで処理。
+- **default export は `Object.assign(app, { queue: handleDialQueue })` パターン**。
+  `app.fetch` / `app.request` をそのまま保ちながら Workers ランタイムの `.queue` ハンドラを追加する。
 - **新しいクエリ/ルートを足すときは既存層を import**（型・クエリ・ヘルパを再定義しない）。
 - ファイルは単一責務・小さく保つ。
 
