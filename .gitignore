@@ -3,3 +3,9 @@ dist/
 .wrangler/
 .dev.vars
 *.local
+
+# Next.js web frontend ビルド成果物
+web/node_modules/
+web/out/
+web/.next/
+web/next-env.d.ts
