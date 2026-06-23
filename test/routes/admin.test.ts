@@ -59,4 +59,14 @@ describe('admin routes', () => {
     const res = await app.request('/admin/hosoiri/usage?start_date=2024-01-01&end_date=2024-01-31', {}, env);
     expect((await res.json<any[]>())[0].category).toBe('calls');
   });
+
+  // 認可境界: ACCESS_ENABLED=true かつ JWT 無しでは 401（ハンドラに到達しない）
+  it('ACCESS_ENABLED=true でJWT無しは401（/admin/* はAccessで保護）', async () => {
+    const res = await app.request(
+      '/admin/hosoiri/contacts',
+      {},
+      { ...env, ACCESS_ENABLED: 'true', ACCESS_AUD: 'aud', ACCESS_TEAM_DOMAIN: 't.cloudflareaccess.com' } as any,
+    );
+    expect(res.status).toBe(401);
+  });
 });
