@@ -71,6 +71,9 @@ async function handleRecord(c: Ctx) {
   return twimlResponse(c, twiml);
 }
 
+// /hangup は <Record action="/hangup"> のアクションコールバック。
+// 静的な <Hangup> のみを返し、テナントデータも副作用も持たないため、
+// 署名検証・テナント解決のコンテキストを必要としない（意図的にバイパス）。
 function handleHangup(c: Ctx) {
   return twimlResponse(c, new TwiML().hangup());
 }

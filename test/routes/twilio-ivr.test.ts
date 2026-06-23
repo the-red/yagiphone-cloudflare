@@ -68,6 +68,17 @@ describe('Twilio IVR routes', () => {
     expect(xml).toContain('maxLength="50"');
   });
 
+  it('/record: max_recording_length が0以外ならその値をmaxLengthに使う', async () => {
+    const TO2 = '+815000000002';
+    await seedTenant({ tenant_id: 'kamioka', twilio_caller_id: TO2, name: '神岡', max_recording_length: 120 });
+    await seedContact({ tenant_id: 'kamioka', phone_number: '+8193', contact_type: 'listener', name: 'L2' });
+    const res = await post('/record', { To: TO2, From: '+8190' });
+    const xml = await res.text();
+    expect(xml).toContain('1人に送信されます');
+    expect(xml).toContain('maxLength="120"');
+    expect(xml).not.toContain('maxLength="50"');
+  });
+
   it('/hangup: Hangup', async () => {
     const res = await post('/hangup', {});
     expect(await res.text()).toContain('<Hangup></Hangup>');
