@@ -27,10 +27,14 @@ AWS 版（S3 / CloudFront / Lambda(Go) / DynamoDB / Cognito / API Gateway）を
 ```bash
 npm test            # Vitest 全実行（58テスト）
 npm run typecheck   # tsc --noEmit
-npm run migrate:local   # ローカル D1 にマイグレーション適用
-npx wrangler dev    # ローカル開発サーバー（http://localhost:8787）
+npm run migrate:local   # ローカル D1（yagiphone-dev）にマイグレーション適用
+npx wrangler dev    # ローカル開発サーバー（http://localhost:8787、dev設定）
 
 cd web && npm run build   # フロントエンドを web/out/ に静的ビルド
+
+# デプロイ（2環境。詳細は README）
+npm run migrate:dev / npm run deploy:dev     # dev（Worker: yagiphone-dev）
+npm run migrate:prod / npm run deploy:prod   # prod（Worker: yagiphone）
 ```
 
 テストは「失敗を先に確認 → 実装 → 成功確認」の TDD で書く。1テストに絞るなら
@@ -96,12 +100,14 @@ test/                 Vitest（test/helpers/db.ts に applyMigrations/seedTenant
 - Twilio REST は `setTwilioClientFactory()`、Twilio クライアント内部は `fetchImpl` 注入でモック。
 - 正当な署名のテストは `worker/twilio/signature.ts` の `computeSignature` で署名を生成して付与する。
 
-## デプロイ（ユーザー作業）
+## デプロイ（ユーザー作業・2環境）
 
-実デプロイは Cloudflare アカウントが必要。手順は `README.md` 参照:
-`wrangler d1 create yagiphone` → 出力 `database_id` を `wrangler.jsonc` に記入 →
-`npm run migrate:remote` → `cd web && npm run build` → `npx wrangler deploy --env production`。
-Twilio 認証情報を含む `seed.sql` は **コミット禁止**（`.gitignore` 済み）。
+同一アカウントに dev / prod を別 Worker としてデプロイする。`wrangler.jsonc` の
+top-level = dev（`yagiphone-dev`、ゲート無効）、`env.production` = prod（`yagiphone`、ゲート有効）。
+環境ごとに Worker 名・D1（`yagiphone-dev` / `yagiphone`）・Queue（`yagiphone-dial-dev` / `yagiphone-dial`）を分離。
+手順は `README.md` 参照: Queue 作成 → `migrate:dev`/`migrate:prod` → `web` ビルド →
+`deploy:dev`/`deploy:prod`。Twilio 認証情報を含む `seed.sql` は **コミット禁止**（`.gitignore` 済み）。
+無料枠（Workers 100k req/日・D1・Queues）はアカウント単位で dev+prod 共有。
 
 ## 注意点（既知）
 

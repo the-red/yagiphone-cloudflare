@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "yagiphone",
+  // top-level = 開発(dev)環境。`wrangler dev`（ローカル）と `wrangler deploy`（dev リモート）はこちらを使う。
+  "name": "yagiphone-dev",
   "main": "worker/index.ts",
   "compatibility_date": "2024-11-01",
   "assets": {
@@ -11,14 +12,14 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "yagiphone",
-      "database_id": "", // wrangler d1 create yagiphone 実行後に出力されたIDを記入
+      "database_name": "yagiphone-dev",
+      "database_id": "e8d1f694-28fc-4bb0-9d5e-f818503b7bc2",
       "migrations_dir": "migrations"
     }
   ],
   "queues": {
-    "producers": [{ "queue": "yagiphone-dial", "binding": "DIAL_QUEUE" }],
-    "consumers": [{ "queue": "yagiphone-dial", "max_batch_size": 20, "max_batch_timeout": 30, "max_retries": 3 }]
+    "producers": [{ "queue": "yagiphone-dial-dev", "binding": "DIAL_QUEUE" }],
+    "consumers": [{ "queue": "yagiphone-dial-dev", "max_batch_size": 20, "max_batch_timeout": 30, "max_retries": 3 }]
   },
   "vars": {
     "ACCESS_ENABLED": "false",
@@ -26,8 +27,9 @@
     "ACCESS_AUD": "",
     "TWILIO_VALIDATE": "false"
   },
-  // Fix 6: 本番環境設定（認証ゲートをデフォルト有効化）
-  // Wrangler の named env は top-level バインディングを継承しないため、必要な設定を再定義する。
+  // 本番(production)環境。`wrangler deploy --env production` で使う。
+  // named env は name / bindings（d1, queues, vars, assets）を継承しないため再定義する
+  //（main / compatibility_date は top-level から継承される）。
   "env": {
     "production": {
       "name": "yagiphone",
@@ -40,7 +42,7 @@
         {
           "binding": "DB",
           "database_name": "yagiphone",
-          "database_id": "", // wrangler d1 create yagiphone 実行後に出力されたIDを記入
+          "database_id": "8d72ca9e-0d2b-42f7-929e-a7eb1f368e85",
           "migrations_dir": "migrations"
         }
       ],

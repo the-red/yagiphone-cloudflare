@@ -80,8 +80,8 @@ npx wrangler dev
 | `ACCESS_AUD` | `""` | Access Application の Audience（AUD）タグ |
 | `TWILIO_VALIDATE` | `"false"` | `"true"` にすると Twilio Webhook 署名検証を有効化 |
 
-ローカル開発では全て既定値（無効）のまま動作する。
-本番有効化は後述の「カスタムドメイン + Access 有効化」を参照。
+ローカル開発と dev 環境では全て既定値（無効）。本番（`env.production`）は
+`ACCESS_ENABLED` / `TWILIO_VALIDATE` を `"true"` に設定済み。
 
 ---
 
@@ -89,30 +89,35 @@ npx wrangler dev
 
 > **以下のコマンドはユーザー自身の Cloudflare アカウントで実行してください。**
 
-### 1. D1 データベース作成
+dev / prod の2環境を同一アカウントに別 Worker としてデプロイする。`wrangler.jsonc` の
+top-level が **dev**（`yagiphone-dev`）、`env.production` が **prod**（`yagiphone`）。
+
+| | dev | prod |
+|---|---|---|
+| Worker 名 | `yagiphone-dev` | `yagiphone` |
+| D1 DB | `yagiphone-dev` | `yagiphone` |
+| Queue | `yagiphone-dial-dev` | `yagiphone-dial` |
+| 認証ゲート | 無効 | 有効 |
+| デプロイ | `npm run deploy:dev` | `npm run deploy:prod` |
+| マイグレーション | `npm run migrate:dev` | `npm run migrate:prod` |
+
+### 1. リソース作成（初回のみ）
+
+D1 データベースは作成済み（`database_id` は `wrangler.jsonc` に記入済み）。Queue を作成する:
 
 ```bash
-npx wrangler d1 create yagiphone
-npx wrangler queues create yagiphone-dial   # Queue 作成（初回のみ）
+npx wrangler queues create yagiphone-dial-dev   # dev
+npx wrangler queues create yagiphone-dial       # prod
 ```
 
-出力された `database_id` を `wrangler.jsonc` の以下の箇所に記入する:
+新しく D1 を作り直す場合は `npx wrangler d1 create <名前>` の出力 `database_id` を
+`wrangler.jsonc` の該当環境に記入する（dev は top-level、prod は `env.production`）。
 
-```jsonc
-"d1_databases": [
-  {
-    "binding": "DB",
-    "database_name": "yagiphone",
-    "database_id": "ここに貼り付ける",   // <-- wrangler d1 create の出力値
-    "migrations_dir": "migrations"
-  }
-]
-```
-
-### 2. リモートマイグレーション実行
+### 2. マイグレーション
 
 ```bash
-npm run migrate:remote
+npm run migrate:dev    # yagiphone-dev に適用
+npm run migrate:prod   # yagiphone に適用
 ```
 
 ### 3. フロントエンドビルド
@@ -124,20 +129,21 @@ cd web && npm run build && cd ..
 ### 4. デプロイ
 
 ```bash
-npx wrangler deploy --env production
+npm run deploy:dev     # → https://yagiphone-dev.<subdomain>.workers.dev
+npm run deploy:prod    # → https://yagiphone.<subdomain>.workers.dev
 ```
-
-成功すると `https://yagiphone.<subdomain>.workers.dev` が発行される。
 
 ### デプロイ時の注意
 
-- **Twilio Webhook URL の完全一致**: Twilio コンソールで設定する Webhook URL は、Workers が受け取るリクエスト URL（スキーム・ホスト・パス）と**完全に一致**させること。末尾スラッシュの有無など些細な差異でも署名検証が失敗し、正規のリクエストが 403 で拒否される。
+- **Twilio Webhook URL の完全一致**: Twilio コンソールで設定する Webhook URL は、Workers が受け取るリクエスト URL（スキーム・ホスト・パス）と**完全に一致**させること。末尾スラッシュの有無など些細な差異でも署名検証が失敗し、正規のリクエストが 403 で拒否される。dev/prod でテナントの Webhook URL を取り違えないこと。
 - **JWKS キャッシュと鍵ローテーション**: Access JWKS のキャッシュは TTL を持たない。Worker の再デプロイまたはアイソレートの再起動により、Cloudflare Access の鍵ローテーションが自動的に反映される。
+- **無料枠はアカウント共有**: Workers 100k req/日・D1・Queues などの無料枠は dev+prod 合計で効く。
 
 ### 5. 動作確認
 
 ```
-GET https://yagiphone.<subdomain>.workers.dev/health
+GET https://yagiphone-dev.<subdomain>.workers.dev/health   # dev
+GET https://yagiphone.<subdomain>.workers.dev/health       # prod
 → {"status":"ok"}
 ```
 
@@ -146,14 +152,15 @@ GET https://yagiphone.<subdomain>.workers.dev/health
 ## データ投入（シード）
 
 テナント情報（Twilio 認証情報を含む）は **`seed.sql`** に INSERT 文として記述し、
-以下のコマンドで投入する:
+環境ごとに対象 D1 を指定して投入する:
 
 ```bash
-wrangler d1 execute yagiphone --remote --file=seed.sql
+wrangler d1 execute yagiphone-dev --remote --file=seed.sql                  # dev
+wrangler d1 execute yagiphone --remote --env production --file=seed.sql     # prod
 ```
 
 > **`seed.sql` は Twilio 認証情報を含むため絶対にコミットしないこと。**
-> `.gitignore` に追加済み。
+> `.gitignore` に追加済み。dev と prod でテナント内容を分けたい場合は別ファイルにする。
 
 ---
 

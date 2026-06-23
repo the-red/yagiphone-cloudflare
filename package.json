@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy:dev": "wrangler deploy",
+    "deploy:prod": "wrangler deploy --env production",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "migrate:local": "wrangler d1 migrations apply yagiphone --local",
-    "migrate:remote": "wrangler d1 migrations apply yagiphone --remote"
+    "migrate:local": "wrangler d1 migrations apply yagiphone-dev --local",
+    "migrate:dev": "wrangler d1 migrations apply yagiphone-dev --remote",
+    "migrate:prod": "wrangler d1 migrations apply yagiphone --remote --env production"
   },
   "dependencies": {
     "hono": "^4.6.0"
