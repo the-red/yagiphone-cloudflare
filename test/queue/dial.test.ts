@@ -1,13 +1,18 @@
 // test/queue/dial.test.ts
 import { env } from 'cloudflare:test';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { handleDialQueue } from '../../src/queue/dial';
 import { setTwilioClientFactory } from '../../src/routes/twilio';
 import { applyMigrations, seedTenant } from '../helpers/db';
 import type { DialMessage } from '../../src/queue/dial';
 import type { Env } from '../../src/env';
+import * as tenants from '../../src/db/tenants';
 
 describe('handleDialQueue コンシューマー', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(async () => {
     await applyMigrations();
     await env.DB.prepare('DELETE FROM contacts').run();
@@ -94,6 +99,9 @@ describe('handleDialQueue コンシューマー', () => {
       makeCall: async (to: string) => { calls.push(to); },
     }) as any);
 
+    // getTenant の呼び出し回数を直接検証するため spy を仕掛ける
+    const spy = vi.spyOn(tenants, 'getTenant');
+
     const messages = [
       { body: { tenantId: 'hosoiri', to: '+8181', playUrl: 'https://x/p' }, ack: vi.fn(), retry: vi.fn() },
       { body: { tenantId: 'hosoiri', to: '+8182', playUrl: 'https://x/p' }, ack: vi.fn(), retry: vi.fn() },
@@ -102,6 +110,8 @@ describe('handleDialQueue コンシューマー', () => {
 
     await handleDialQueue({ messages } as any, env as unknown as Env);
 
+    // 同一 tenantId の3メッセージでも getTenant は1回だけ（キャッシュが効いている証拠）
+    expect(spy).toHaveBeenCalledTimes(1);
     // 全メッセージに makeCall が呼ばれる
     expect(calls.sort()).toEqual(['+8181', '+8182', '+8183']);
     // 全 ack される
