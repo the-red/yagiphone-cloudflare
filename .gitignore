@@ -10,3 +10,6 @@ web/node_modules/
 web/out/
 web/.next/
 web/next-env.d.ts
+
+# SDD スクラッチ作業ディレクトリ（subagent-driven-development の中間生成物）
+.superpowers/

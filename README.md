@@ -193,6 +193,6 @@ yagiphone-cloudflare/
 
 ## 参照
 
-- 移植元 AWS 版: `/Users/the_red/ghq/github.com/the-red/yagiphone`
+- 移植元 AWS 版: `the-red/yagiphone` リポジトリ（S3 / CloudFront / Lambda(Go) / DynamoDB / Cognito 構成）
 - 設計ドキュメント: `docs/superpowers/`
 - 引き継ぎドキュメント: `HANDOFF.md`
