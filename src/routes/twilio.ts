@@ -110,6 +110,8 @@ async function handleReplay(c: Ctx) {
   if (!(await assertTwilioSignature(c, params, tenant.twilioAuthToken))) return c.text('forbidden', 403);
 
   const client = getTwilioClient(tenant);
+  // listRecordings は Twilio アカウント単位で全録音を返す。クライアントはテナント自身の
+  // sid/token から生成されるため、「1 テナント = 1 Twilio アカウント」モデルに依存している。
   const recordings = await client.listRecordings(1);
   const twiml = new TwiML();
   if (recordings.length === 0) { twiml.say('録音がありません。'); return twimlResponse(c, twiml); }

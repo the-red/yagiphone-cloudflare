@@ -33,6 +33,7 @@ describe('playback/dial routes', () => {
     const res = await app.request(`/replay?To=${encodeURIComponent(TO)}`, {}, env);
     const xml = await res.text();
     expect(xml).toContain('太郎');
+    expect(xml).toContain('6月23日9時30分');
     expect(xml).toContain('<Play>https://api.twilio.com/x</Play>');
   });
 
@@ -49,11 +50,21 @@ describe('playback/dial routes', () => {
   it('/dial: 各listenerにmakeCallし空Responseを返す', async () => {
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8181', contact_type: 'listener', name: 'L1' });
     await seedContact({ tenant_id: 'hosoiri', phone_number: '+8182', contact_type: 'listener', name: 'L2' });
-    const calls: string[] = [];
-    setTwilioClientFactory(() => ({ makeCall: async (to: string) => { calls.push(to); } }) as any);
+    const calls: { to: string; from: string; url: string }[] = [];
+    setTwilioClientFactory(() => ({
+      makeCall: async (to: string, from: string, url: string) => { calls.push({ to, from, url }); },
+    }) as any);
     const url = `/dial?TenantID=hosoiri&Caller=${encodeURIComponent('+8190')}&RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`;
     const res = await app.request(url, {}, env);
-    expect(calls.sort()).toEqual(['+8181', '+8182']);
+    expect(calls.map((c) => c.to).sort()).toEqual(['+8181', '+8182']);
+    // 各発信の from はテナントの twilioCallerId（seed した値）と一致する
+    expect(calls.every((c) => c.from === TO)).toBe(true);
+    // 各発信の url はテナントの domain の /play で、Recorder/RecordingUrl/TenantID を含む
+    expect(calls.every((c) =>
+      c.url.includes('https://h.example/play?Recorder=')
+      && c.url.includes(`RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`)
+      && c.url.includes('TenantID=hosoiri'),
+    )).toBe(true);
     expect(await res.text()).toBe('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   });
 });
