@@ -17,15 +17,8 @@
     }
   ],
   "queues": {
-    "consumers": [
-      {
-        "queue": "yagiphone-dial",
-        "max_batch_size": 10,
-        "max_batch_timeout": 10,
-        "max_retries": 3,
-        "dead_letter_queue": "yagiphone-dial-dlq"
-      }
-    ]
+    "producers": [{ "queue": "yagiphone-dial", "binding": "DIAL_QUEUE" }],
+    "consumers": [{ "queue": "yagiphone-dial", "max_batch_size": 20, "max_batch_timeout": 30, "max_retries": 3 }]
   },
   "vars": {
     "ACCESS_ENABLED": "false",
@@ -52,15 +45,8 @@
         }
       ],
       "queues": {
-        "consumers": [
-          {
-            "queue": "yagiphone-dial",
-            "max_batch_size": 10,
-            "max_batch_timeout": 10,
-            "max_retries": 3,
-            "dead_letter_queue": "yagiphone-dial-dlq"
-          }
-        ]
+        "producers": [{ "queue": "yagiphone-dial", "binding": "DIAL_QUEUE" }],
+        "consumers": [{ "queue": "yagiphone-dial", "max_batch_size": 20, "max_batch_timeout": 30, "max_retries": 3 }]
       },
       "vars": {
         "ACCESS_ENABLED": "true",
