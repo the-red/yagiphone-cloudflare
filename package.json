@@ -1,0 +1,25 @@
+{
+  "name": "yagiphone-cloudflare",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "migrate:local": "wrangler d1 migrations apply yagiphone --local",
+    "migrate:remote": "wrangler d1 migrations apply yagiphone --remote"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.5.0",
+    "@cloudflare/workers-types": "^4.20240000.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0",
+    "wrangler": "^3.80.0"
+  }
+}
