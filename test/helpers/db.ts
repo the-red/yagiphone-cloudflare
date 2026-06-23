@@ -1,9 +1,14 @@
 import { env, applyD1Migrations } from 'cloudflare:test';
+import type { D1Migration } from '@cloudflare/vitest-pool-workers';
+import type { Env as WorkerEnv } from '../../worker/env';
 
-declare module 'cloudflare:test' {
-  interface ProvidedEnv {
-    DB: D1Database;
-    TEST_MIGRATIONS: D1Migration[];
+// v0.16 以降 cloudflare:test の env は Cloudflare.Env 型。
+// アプリの Env にテスト専用バインディング TEST_MIGRATIONS を加えて拡張する。
+declare global {
+  namespace Cloudflare {
+    interface Env extends WorkerEnv {
+      TEST_MIGRATIONS: D1Migration[];
+    }
   }
 }
 

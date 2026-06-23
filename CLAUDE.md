@@ -25,7 +25,7 @@ AWS 版（S3 / CloudFront / Lambda(Go) / DynamoDB / Cognito / API Gateway）を
 ## よく使うコマンド
 
 ```bash
-npm test            # Vitest 全実行（54テスト）
+npm test            # Vitest 全実行（58テスト）
 npm run typecheck   # tsc --noEmit
 npm run migrate:local   # ローカル D1 にマイグレーション適用
 npx wrangler dev    # ローカル開発サーバー（http://localhost:8787）
