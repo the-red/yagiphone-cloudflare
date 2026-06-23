@@ -23,8 +23,8 @@
   },
   "vars": {
     "ACCESS_ENABLED": "false",
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
+    "ACCESS_TEAM_DOMAIN": "the-red.cloudflareaccess.com",
+    "ACCESS_AUD": "e5a321eeee974c537b078a62b40659e5d4c45d446e5ead607a28a6c24fe0fa91",
     "TWILIO_VALIDATE": "false"
   },
   // 本番(production)環境。`wrangler deploy --env production` で使う。
@@ -53,8 +53,8 @@
       "vars": {
         "ACCESS_ENABLED": "true",
         "TWILIO_VALIDATE": "true",
-        "ACCESS_TEAM_DOMAIN": "",
-        "ACCESS_AUD": ""
+        "ACCESS_TEAM_DOMAIN": "the-red.cloudflareaccess.com",
+        "ACCESS_AUD": "a92f17e0f9f005a24851a87021791560cdfbb8df82cc3c0eaa86abd07bd44149"
       }
     }
   }

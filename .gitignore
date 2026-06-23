@@ -13,3 +13,6 @@ web/next-env.d.ts
 
 # SDD スクラッチ作業ディレクトリ（subagent-driven-development の中間生成物）
 .superpowers/
+
+# ローカルメモ・環境値（AUD等のスクラッチ。コミットしない）
+.env

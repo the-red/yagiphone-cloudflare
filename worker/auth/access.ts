@@ -57,9 +57,10 @@ export const accessMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: { u
     const expectedIss = `https://${c.env.ACCESS_TEAM_DOMAIN}`;
     if (payload.iss !== expectedIss) return c.json({ error: 'bad issuer' }, 401);
 
-    // aud 検証
+    // aud 検証。ACCESS_AUD はカンマ区切りで複数指定可（本番URLとプレビューURLは別AUDのため）。
+    const allowedAuds = c.env.ACCESS_AUD.split(',').map((s) => s.trim()).filter(Boolean);
     const auds = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-    if (!auds.includes(c.env.ACCESS_AUD)) return c.json({ error: 'bad audience' }, 401);
+    if (!auds.some((a: string) => allowedAuds.includes(a))) return c.json({ error: 'bad audience' }, 401);
 
     // exp 検証（Date.now() はWorkersランタイムで利用可能）
     // exp が無い・数値でないトークンは拒否（多層防御）
