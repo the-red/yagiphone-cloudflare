@@ -5,6 +5,7 @@ import { handleDialQueue } from '../../src/queue/dial';
 import { setTwilioClientFactory } from '../../src/routes/twilio';
 import { applyMigrations, seedTenant } from '../helpers/db';
 import type { DialMessage } from '../../src/queue/dial';
+import type { Env } from '../../src/env';
 
 describe('handleDialQueue コンシューマー', () => {
   beforeEach(async () => {
@@ -39,7 +40,7 @@ describe('handleDialQueue コンシューマー', () => {
     };
 
     const batch = { messages: [msg1, msg2] };
-    await handleDialQueue(batch as any, env);
+    await handleDialQueue(batch as any, env as unknown as Env);
 
     // 各メッセージに対して makeCall が呼ばれる
     expect(calls.map((c) => c.to).sort()).toEqual(['+8181', '+8182']);
@@ -64,7 +65,7 @@ describe('handleDialQueue コンシューマー', () => {
       retry: vi.fn(),
     };
 
-    await handleDialQueue({ messages: [msg] } as any, env);
+    await handleDialQueue({ messages: [msg] } as any, env as unknown as Env);
 
     expect(msg.retry).toHaveBeenCalledOnce();
     expect(msg.ack).not.toHaveBeenCalled();
@@ -81,7 +82,7 @@ describe('handleDialQueue コンシューマー', () => {
       retry: vi.fn(),
     };
 
-    await handleDialQueue({ messages: [msg] } as any, env);
+    await handleDialQueue({ messages: [msg] } as any, env as unknown as Env);
 
     expect(msg.ack).toHaveBeenCalledOnce();
     expect(msg.retry).not.toHaveBeenCalled();
@@ -99,7 +100,7 @@ describe('handleDialQueue コンシューマー', () => {
       { body: { tenantId: 'hosoiri', to: '+8183', playUrl: 'https://x/p' }, ack: vi.fn(), retry: vi.fn() },
     ];
 
-    await handleDialQueue({ messages } as any, env);
+    await handleDialQueue({ messages } as any, env as unknown as Env);
 
     // 全メッセージに makeCall が呼ばれる
     expect(calls.sort()).toEqual(['+8181', '+8182', '+8183']);

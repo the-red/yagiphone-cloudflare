@@ -13,6 +13,8 @@ export default defineWorkersConfig(async () => {
             compatibilityFlags: ['nodejs_compat'],
             // テスト用D1。マイグレーションは各テストの setup で適用する。
             d1Databases: ['DB'],
+            // テスト用キュー
+            queues: ['DIAL_QUEUE'],
             // テスト内で applyD1Migrations() に渡すマイグレーション情報
             bindings: { TEST_MIGRATIONS: migrations },
           },

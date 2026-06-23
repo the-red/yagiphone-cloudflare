@@ -16,6 +16,17 @@
       "migrations_dir": "migrations"
     }
   ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "yagiphone-dial",
+        "max_batch_size": 10,
+        "max_batch_timeout": 10,
+        "max_retries": 3,
+        "dead_letter_queue": "yagiphone-dial-dlq"
+      }
+    ]
+  },
   "vars": {
     "ACCESS_ENABLED": "false",
     "ACCESS_TEAM_DOMAIN": "",
@@ -40,6 +51,17 @@
           "migrations_dir": "migrations"
         }
       ],
+      "queues": {
+        "consumers": [
+          {
+            "queue": "yagiphone-dial",
+            "max_batch_size": 10,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "dead_letter_queue": "yagiphone-dial-dlq"
+          }
+        ]
+      },
       "vars": {
         "ACCESS_ENABLED": "true",
         "TWILIO_VALIDATE": "true",
