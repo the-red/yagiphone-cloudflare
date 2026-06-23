@@ -2,6 +2,29 @@
 
 最終更新: 2026-06-23
 
+---
+
+## ステータス（2026-06-23 時点）
+
+**実装完了 — Task 1〜14 完了、51テスト全通過。**
+
+### 実装済み
+- Worker + Hono ルーティング（全ルート: `/health`, Twilio Webhooks, `/admin/*`）
+- D1 スキーマ・マイグレーション（tenants / contacts）
+- Twilio REST クライアント（fetchベース）
+- Twilio Webhook 署名検証ミドルウェア
+- Cloudflare Access JWT 検証ミドルウェア（`/admin/*`）
+- 管理 API（contacts CRUD / recordings / usage）
+- Next.js 静的フロントエンド（web/）移植・Amplify 撤去・Access 対応
+- Static Assets binding（SPA フォールバック）
+
+### ユーザーが行う残作業
+1. **デプロイ**: `wrangler d1 create yagiphone` → `database_id` を `wrangler.jsonc` に記入 → `npm run migrate:remote` → `npx wrangler deploy`（詳細は `README.md` を参照）
+2. **データ投入**: `seed.sql` を作成し `wrangler d1 execute yagiphone --remote --file=seed.sql` で投入（コミット禁止）
+3. **カスタムドメイン + Access 有効化**: Zero Trust でアクセスポリシー設定 → `ACCESS_ENABLED=true` / `TWILIO_VALIDATE=true` → Twilio Webhook URL 更新（詳細は `README.md` を参照）
+
+---
+
 このドキュメントは、AWS版 yagiphone（`/Users/the_red/ghq/github.com/the-red/yagiphone`）を
 **Cloudflare前提で再構築**するための検討結果と作業計画をまとめたもの。別セッションでもこれを読めば続行できる。
 

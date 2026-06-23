@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "yagiphone",
-      "database_id": "",
+      "database_id": "", // wrangler d1 create yagiphone 実行後に出力されたIDを記入
       "migrations_dir": "migrations"
     }
   ],
