@@ -83,4 +83,10 @@ describe('Twilio IVR routes', () => {
     const res = await post('/twilio/hangup', {});
     expect(await res.text()).toContain('<Hangup></Hangup>');
   });
+
+  it('/twilio 配下の未定義パスは404（管理画面SPAを公開しない）', async () => {
+    const res = await app.request('/twilio/xxx', {}, env);
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain('管理画面');
+  });
 });

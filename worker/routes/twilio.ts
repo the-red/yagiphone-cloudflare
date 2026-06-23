@@ -187,3 +187,7 @@ twilioRoutes.post('/replay', handleReplay);
 // Fix 4: Go版原典に合わせ /play は GET のみ
 twilioRoutes.get('/play', handlePlay);
 twilioRoutes.get('/dial', handleDial);
+
+// /twilio/* は Access で Bypass（公開）。未定義パスを ASSETS フォールバック（管理画面SPA）に
+// 落とさないよう、ここで 404 を返して打ち切る。
+twilioRoutes.all('*', (c) => c.text('Not Found', 404));
