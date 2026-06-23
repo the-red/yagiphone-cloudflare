@@ -21,5 +21,31 @@
     "ACCESS_TEAM_DOMAIN": "",
     "ACCESS_AUD": "",
     "TWILIO_VALIDATE": "false"
+  },
+  // Fix 6: 本番環境設定（認証ゲートをデフォルト有効化）
+  // Wrangler の named env は top-level バインディングを継承しないため、必要な設定を再定義する。
+  "env": {
+    "production": {
+      "name": "yagiphone",
+      "assets": {
+        "directory": "./web/out",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "yagiphone",
+          "database_id": "", // wrangler d1 create yagiphone 実行後に出力されたIDを記入
+          "migrations_dir": "migrations"
+        }
+      ],
+      "vars": {
+        "ACCESS_ENABLED": "true",
+        "TWILIO_VALIDATE": "true",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ACCESS_AUD": ""
+      }
+    }
   }
 }

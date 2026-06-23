@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import app from '../../src/index';
 import { applyMigrations, seedTenant, seedContact } from '../helpers/db';
 import { setTwilioClientFactory, formatRecordingDate } from '../../src/routes/twilio';
+import { computeSignature } from '../../src/twilio/signature';
 
 const TO = '+815000000001';
 
@@ -66,5 +67,42 @@ describe('playback/dial routes', () => {
       && c.url.includes('TenantID=hosoiri'),
     )).toBe(true);
     expect(await res.text()).toBe('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+  });
+
+  // --- 署名検証テスト（TWILIO_VALIDATE='true' 時）---
+
+  it('/dial: TWILIO_VALIDATE=true かつ署名なしで 403、makeCall 未呼び出し', async () => {
+    const calls: string[] = [];
+    setTwilioClientFactory(() => ({
+      makeCall: async (to: string) => { calls.push(to); },
+    }) as any);
+    const url = `/dial?TenantID=hosoiri&Caller=${encodeURIComponent('+8190')}&RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`;
+    const res = await app.request(url, {}, { ...env, TWILIO_VALIDATE: 'true' } as any);
+    expect(res.status).toBe(403);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('/dial: TWILIO_VALIDATE=true かつ正当な署名で 200、makeCall 呼び出し', async () => {
+    await seedContact({ tenant_id: 'hosoiri', phone_number: '+8181', contact_type: 'listener', name: 'L1' });
+    const calls: string[] = [];
+    setTwilioClientFactory(() => ({
+      makeCall: async (to: string) => { calls.push(to); },
+    }) as any);
+    // Hono の app.request に相対パスを渡すと内部では http://localhost/ をベースにする
+    const path = `/dial?TenantID=hosoiri&Caller=${encodeURIComponent('+8190')}&RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`;
+    const fullUrl = `http://localhost${path}`;
+    // GET リクエストなのでパラメータは空オブジェクト（URL にクエリが含まれる）
+    const sig = await computeSignature('token-hosoiri', fullUrl, {});
+    const res = await app.request(path, {
+      headers: { 'X-Twilio-Signature': sig },
+    }, { ...env, TWILIO_VALIDATE: 'true' } as any);
+    expect(res.status).toBe(200);
+    expect(calls).toContain('+8181');
+  });
+
+  it('/play: TWILIO_VALIDATE=true かつ署名なしで 403', async () => {
+    const url = `/play?TenantID=hosoiri&Recorder=${encodeURIComponent('+8190')}&RecordingUrl=${encodeURIComponent('https://x/a.mp3')}`;
+    const res = await app.request(url, {}, { ...env, TWILIO_VALIDATE: 'true' } as any);
+    expect(res.status).toBe(403);
   });
 });

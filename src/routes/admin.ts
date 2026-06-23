@@ -4,6 +4,10 @@ import { getTenant } from '../db/tenants';
 import { listAllContacts, createContact, deleteContact } from '../db/contacts';
 import { getTwilioClient } from './twilio';
 
+// Fix 5: 認証スコープ注記
+// 認証は accessMiddleware で強制されるが、テナント単位の認可は行っていない。
+// 認証済みの Access ユーザーは任意の :tenantId を操作できる。
+// これは Access ポリシーが単一の信頼済みオペレーターグループのみを許可することを前提としている。
 export const adminRoutes = new Hono<{ Bindings: Env; Variables: { userEmail: string } }>();
 
 // GET /admin/:tenantId/contacts → 全コンタクト一覧

@@ -136,9 +136,12 @@ async function handlePlay(c: Ctx) {
   const recUrl = params.RecordingUrl ?? '';
   const tenant = await getTenant(c.env.DB, tenantId);
   if (!tenant) return errorTwiml(c);
+  // Fix 2: テナントが確定した後、makeCall前に署名検証
+  if (!(await assertTwilioSignature(c, params, tenant.twilioAuthToken))) return c.text('forbidden', 403);
 
   let recorderName = '不明';
-  const contact = await findRecorder(c.env.DB, tenantId, recorder);
+  // Fix 3: DB エラーが発生しても応答を壊さないよう catch でフォールバック
+  const contact = await findRecorder(c.env.DB, tenantId, recorder).catch(() => null);
   if (contact) recorderName = contact.name;
 
   const twiml = new TwiML()
@@ -157,6 +160,9 @@ async function handleDial(c: Ctx) {
 
   const tenant = await getTenant(c.env.DB, tenantId);
   if (!tenant) return errorTwiml(c);
+  // Fix 1: テナントが確定した後、makeCall前に署名検証
+  if (!(await assertTwilioSignature(c, params, tenant.twilioAuthToken))) return c.text('forbidden', 403);
+
   const listeners = await listListeners(c.env.DB, tenantId);
   const client = getTwilioClient(tenant);
 
@@ -172,6 +178,6 @@ async function handleDial(c: Ctx) {
 
 twilioRoutes.get('/replay', handleReplay);
 twilioRoutes.post('/replay', handleReplay);
+// Fix 4: Go版原典に合わせ /play は GET のみ
 twilioRoutes.get('/play', handlePlay);
-twilioRoutes.post('/play', handlePlay);
 twilioRoutes.get('/dial', handleDial);

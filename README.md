@@ -121,10 +121,15 @@ cd web && npm run build && cd ..
 ### 4. デプロイ
 
 ```bash
-npx wrangler deploy
+npx wrangler deploy --env production
 ```
 
 成功すると `https://yagiphone.<subdomain>.workers.dev` が発行される。
+
+### デプロイ時の注意
+
+- **Twilio Webhook URL の完全一致**: Twilio コンソールで設定する Webhook URL は、Workers が受け取るリクエスト URL（スキーム・ホスト・パス）と**完全に一致**させること。末尾スラッシュの有無など些細な差異でも署名検証が失敗し、正規のリクエストが 403 で拒否される。
+- **JWKS キャッシュと鍵ローテーション**: Access JWKS のキャッシュは TTL を持たない。Worker の再デプロイまたはアイソレートの再起動により、Cloudflare Access の鍵ローテーションが自動的に反映される。
 
 ### 5. 動作確認
 
