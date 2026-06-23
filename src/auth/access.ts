@@ -24,6 +24,7 @@ function decodeJson(seg: string): any {
 async function fetchJwks(teamDomain: string): Promise<Jwk[]> {
   if (jwksCache && jwksCache.domain === teamDomain) return jwksCache.keys;
   const res = await fetch(`https://${teamDomain}/cdn-cgi/access/certs`);
+  if (!res.ok) throw new Error(`JWKS fetch failed: ${res.status}`);
   const data = await res.json() as { keys: Jwk[] };
   jwksCache = { domain: teamDomain, keys: data.keys };
   return data.keys;
@@ -61,9 +62,9 @@ export const accessMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: { u
     if (!auds.includes(c.env.ACCESS_AUD)) return c.json({ error: 'bad audience' }, 401);
 
     // exp 検証（Date.now() はWorkersランタイムで利用可能）
-    if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
-      return c.json({ error: 'expired' }, 401);
-    }
+    // exp が無い・数値でないトークンは拒否（多層防御）
+    if (typeof payload.exp !== 'number') return c.json({ error: 'missing exp' }, 401);
+    if (payload.exp * 1000 < Date.now()) return c.json({ error: 'expired' }, 401);
 
     // JWKS から kid に一致するキーを取得
     const jwks = await fetchJwks(c.env.ACCESS_TEAM_DOMAIN);
