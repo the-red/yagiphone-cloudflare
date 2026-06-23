@@ -5,8 +5,26 @@ import { findContact, findRecorder, listListeners } from '../db/contacts';
 import {
   parseParams, twimlResponse, errorTwiml, resolveTenantByTo, assertTwilioSignature, type Ctx,
 } from './helpers';
+import type { Tenant } from '../db/types';
+import { TwilioClient, recordingUrl } from '../twilio/client';
+import { getTenant } from '../db/tenants';
 
 export const twilioRoutes = new Hono<{ Bindings: Env }>();
+
+// テスト差し替え可能な Twilio クライアント生成
+export type TwilioClientLike = Pick<TwilioClient, 'makeCall' | 'listRecordings' | 'getCallFrom' | 'listUsageRecords'>;
+let twilioClientFactory: (t: Tenant) => TwilioClientLike =
+  (t) => new TwilioClient(t.twilioAccountSid, t.twilioAuthToken);
+export function setTwilioClientFactory(f: (t: Tenant) => TwilioClientLike) { twilioClientFactory = f; }
+export function getTwilioClient(t: Tenant): TwilioClientLike { return twilioClientFactory(t); }
+
+// RFC1123Z → "M月D日H時M分"（JST）
+export function formatRecordingDate(dateCreated: string): string {
+  const ms = Date.parse(dateCreated);
+  if (Number.isNaN(ms)) return dateCreated;
+  const jst = new Date(ms + 9 * 60 * 60 * 1000);
+  return `${jst.getUTCMonth() + 1}月${jst.getUTCDate()}日${jst.getUTCHours()}時${jst.getUTCMinutes()}分`;
+}
 
 async function handleMain(c: Ctx) {
   const params = await parseParams(c);
@@ -84,3 +102,74 @@ twilioRoutes.post('/router', handleRouter);
 twilioRoutes.get('/record', handleRecord);
 twilioRoutes.post('/record', handleRecord);
 twilioRoutes.post('/hangup', handleHangup);
+
+async function handleReplay(c: Ctx) {
+  const params = await parseParams(c);
+  const tenant = await resolveTenantByTo(c, params);
+  if (!tenant) return errorTwiml(c);
+  if (!(await assertTwilioSignature(c, params, tenant.twilioAuthToken))) return c.text('forbidden', 403);
+
+  const client = getTwilioClient(tenant);
+  const recordings = await client.listRecordings(1);
+  const twiml = new TwiML();
+  if (recordings.length === 0) { twiml.say('録音がありません。'); return twimlResponse(c, twiml); }
+
+  const rec = recordings[0];
+  let recorderName = '不明';
+  const callFrom = await client.getCallFrom(rec.callSid).catch(() => '');
+  if (callFrom) {
+    const contact = await findRecorder(c.env.DB, tenant.tenantId, callFrom);
+    if (contact) recorderName = contact.name;
+  }
+  const dateStr = formatRecordingDate(rec.dateCreated);
+  twiml.say(`最新の録音、${dateStr}、${recorderName}からのお知らせを再生します。`)
+    .pause(1).play(recordingUrl(rec.uri)).pause(1).say('以上で再生を終わります。');
+  return twimlResponse(c, twiml);
+}
+
+async function handlePlay(c: Ctx) {
+  const params = await parseParams(c);
+  const tenantId = params.TenantID ?? '';
+  const recorder = params.Recorder ?? '';
+  const recUrl = params.RecordingUrl ?? '';
+  const tenant = await getTenant(c.env.DB, tenantId);
+  if (!tenant) return errorTwiml(c);
+
+  let recorderName = '不明';
+  const contact = await findRecorder(c.env.DB, tenantId, recorder);
+  if (contact) recorderName = contact.name;
+
+  const twiml = new TwiML()
+    .say(`こんにちは。${tenant.name}、${recorderName}からのお知らせです。`)
+    .pause(1).play(recUrl).pause(1)
+    .say('以上でお知らせを終わります。お聞きいただきありがとうございました。');
+  return twimlResponse(c, twiml);
+}
+
+async function handleDial(c: Ctx) {
+  const params = await parseParams(c);
+  const tenantId = params.TenantID ?? '';
+  const caller = params.Caller ?? '';
+  const recUrl = params.RecordingUrl ?? '';
+  if (!tenantId || !caller || !recUrl) return errorTwiml(c);
+
+  const tenant = await getTenant(c.env.DB, tenantId);
+  if (!tenant) return errorTwiml(c);
+  const listeners = await listListeners(c.env.DB, tenantId);
+  const client = getTwilioClient(tenant);
+
+  const playUrl = `https://${tenant.domain}/play?Recorder=${encodeURIComponent(caller)}&RecordingUrl=${encodeURIComponent(recUrl)}&TenantID=${encodeURIComponent(tenantId)}`;
+
+  await Promise.all(listeners.map((l) =>
+    client.makeCall(l.phoneNumber, tenant.twilioCallerId, playUrl).catch((e) => {
+      console.log(`WARN: ${l.phoneNumber} への発信失敗: ${e}`);
+    }),
+  ));
+  return twimlResponse(c, new TwiML());
+}
+
+twilioRoutes.get('/replay', handleReplay);
+twilioRoutes.post('/replay', handleReplay);
+twilioRoutes.get('/play', handlePlay);
+twilioRoutes.post('/play', handlePlay);
+twilioRoutes.get('/dial', handleDial);
