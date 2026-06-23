@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
-import { accessMiddleware } from '../../src/auth/access';
-import type { Env } from '../../src/env';
+import { accessMiddleware } from '../../worker/auth/access';
+import type { Env } from '../../worker/env';
 
 function appWith(envOverride: Partial<Env>) {
   const a = new Hono<{ Bindings: Env; Variables: { userEmail: string } }>();

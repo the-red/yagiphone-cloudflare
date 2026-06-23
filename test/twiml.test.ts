@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TwiML } from '../src/twiml';
+import { TwiML } from '../worker/twiml';
 
 const HEADER = '<?xml version="1.0" encoding="UTF-8"?>';
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
-import { parseParams } from '../../src/routes/helpers';
+import { parseParams } from '../../worker/routes/helpers';
 
 describe('parseParams', () => {
   it('GETクエリを解析', async () => {

@@ -4,7 +4,7 @@ import { applyMigrations } from '../helpers/db';
 import {
   findContact, findRecorder, listRecorders, listListeners,
   listAllContacts, createContact, deleteContact,
-} from '../../src/db/contacts';
+} from '../../worker/db/contacts';
 
 describe('contacts queries', () => {
   beforeEach(async () => {

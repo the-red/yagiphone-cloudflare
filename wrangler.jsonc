@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "yagiphone",
-  "main": "src/index.ts",
+  "main": "worker/index.ts",
   "compatibility_date": "2024-11-01",
   "assets": {
     "directory": "./web/out",

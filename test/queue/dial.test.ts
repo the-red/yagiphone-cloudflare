@@ -1,12 +1,12 @@
 // test/queue/dial.test.ts
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { handleDialQueue } from '../../src/queue/dial';
-import { setTwilioClientFactory } from '../../src/routes/twilio';
+import { handleDialQueue } from '../../worker/queue/dial';
+import { setTwilioClientFactory } from '../../worker/routes/twilio';
 import { applyMigrations, seedTenant } from '../helpers/db';
-import type { DialMessage } from '../../src/queue/dial';
-import type { Env } from '../../src/env';
-import * as tenants from '../../src/db/tenants';
+import type { DialMessage } from '../../worker/queue/dial';
+import type { Env } from '../../worker/env';
+import * as tenants from '../../worker/db/tenants';
 
 describe('handleDialQueue コンシューマー', () => {
   afterEach(() => {

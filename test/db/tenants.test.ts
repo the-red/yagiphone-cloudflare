@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import { applyMigrations, seedTenant } from '../helpers/db';
-import { getTenant, getTenantByCallerId } from '../../src/db/tenants';
+import { getTenant, getTenantByCallerId } from '../../worker/db/tenants';
 
 describe('tenants queries', () => {
   beforeAll(async () => {

@@ -1,4 +1,4 @@
-// src/queue/dial.ts
+// worker/queue/dial.ts
 import type { Env } from '../env';
 import { getTenant } from '../db/tenants';
 import { getTwilioClient } from '../routes/twilio';

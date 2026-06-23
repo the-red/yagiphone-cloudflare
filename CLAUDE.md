@@ -39,7 +39,7 @@ cd web && npm run build   # フロントエンドを web/out/ に静的ビルド
 ## ディレクトリ構成
 
 ```
-src/
+worker/               Worker 本体（wrangler.jsonc の main = worker/index.ts）
   index.ts            Hono アプリ。マウント順が重要:
                       /health → twilioRoutes → use('/admin/*', accessMiddleware)
                       → adminRoutes → app.all('*') で ASSETS フォールバック（必ず最後）
@@ -94,7 +94,7 @@ test/                 Vitest（test/helpers/db.ts に applyMigrations/seedTenant
 - 環境変数を切り替えるテストは `app.request(path, init, { ...env, TWILIO_VALIDATE: 'true' })` の
   第3引数で env を上書き（Access の 401 や署名 403 の検証）。
 - Twilio REST は `setTwilioClientFactory()`、Twilio クライアント内部は `fetchImpl` 注入でモック。
-- 正当な署名のテストは `src/twilio/signature.ts` の `computeSignature` で署名を生成して付与する。
+- 正当な署名のテストは `worker/twilio/signature.ts` の `computeSignature` で署名を生成して付与する。
 
 ## デプロイ（ユーザー作業）
 

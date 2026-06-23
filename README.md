@@ -22,7 +22,7 @@ Cloudflare DNS → 単一Worker（Honoルーター）
              └─ fetch() → Twilio REST API
 ```
 
-- **Worker + Hono**: ルーティング・ミドルウェア・ハンドラ（`src/`）
+- **Worker + Hono**: ルーティング・ミドルウェア・ハンドラ（`worker/`）
 - **D1（SQLite）**: テナント情報・名簿。マイグレーションは `migrations/`
 - **Static Assets binding**: `web/out/` を SPA モードで配信
 - **Cloudflare Access**: `/admin/*` を保護。Worker 内で `Cf-Access-Jwt-Assertion` を検証
@@ -180,16 +180,17 @@ wrangler d1 execute yagiphone --remote --file=seed.sql
 
 ```
 yagiphone-cloudflare/
-  src/
-    index.ts          … Worker エントリポイント（Hono アプリ）
-    env.ts            … 環境変数型定義
-    routes/
-      twilio/         … Twilio Webhook ハンドラ（/main /router /record /hangup /replay /play /dial）
-      admin/          … 管理 API ハンドラ（/admin/:tenantId/...）
-    auth/             … Cloudflare Access JWT 検証ミドルウェア
-    db/               … D1 アクセス層（tenants / contacts クエリ）
-    twiml/            … TwiML 生成ユーティリティ
-    twilio/           … Twilio REST クライアント（fetch ベース）
+  worker/             … Worker 本体（wrangler.jsonc の main = worker/index.ts）
+    index.ts          … エントリポイント（Hono アプリ + queue コンシューマー）
+    env.ts            … 環境変数・バインディング型定義
+    routes/twilio.ts  … Twilio Webhook ハンドラ（/main /router /record /hangup /replay /play /dial）
+    routes/admin.ts   … 管理 API ハンドラ（/admin/:tenantId/...）
+    routes/helpers.ts … リクエスト共通ヘルパ
+    auth/access.ts    … Cloudflare Access JWT 検証ミドルウェア
+    db/               … D1 アクセス層（types / tenants / contacts）
+    twiml/index.ts    … TwiML 生成ユーティリティ
+    twilio/           … Twilio REST クライアント（client）+ 署名検証（signature）
+    queue/dial.ts     … /dial 一斉架電のキューコンシューマー
   web/                … Next.js 静的フロントエンド（npm run build → out/）
   migrations/
     0001_init.sql     … D1 スキーマ（tenants / contacts テーブル）

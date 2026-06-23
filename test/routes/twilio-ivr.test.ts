@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeEach } from 'vitest';
-import app from '../../src/index';
+import app from '../../worker/index';
 import { applyMigrations, seedTenant, seedContact } from '../helpers/db';
 
 const TO = '+815000000001';

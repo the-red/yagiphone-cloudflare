@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeSignature, verifyTwilioSignature } from '../src/twilio/signature';
+import { computeSignature, verifyTwilioSignature } from '../worker/twilio/signature';
 
 const TOKEN = '12345';
 // Twilio公式ドキュメント(https://www.twilio.com/docs/usage/security)のURLはexample.com。

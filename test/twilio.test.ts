@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { TwilioClient, recordingUrl } from '../src/twilio/client';
+import { TwilioClient, recordingUrl } from '../worker/twilio/client';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });

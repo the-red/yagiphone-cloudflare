@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeEach } from 'vitest';
-import app from '../../src/index';
+import app from '../../worker/index';
 import { applyMigrations, seedTenant, seedContact } from '../helpers/db';
-import { setTwilioClientFactory } from '../../src/routes/twilio';
+import { setTwilioClientFactory } from '../../worker/routes/twilio';
 
 describe('admin routes', () => {
   beforeEach(async () => {
